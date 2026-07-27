@@ -1,0 +1,5 @@
+V10.1
+- Mobiele navigatie vervangen door een compacte liquid-glass balk met vier hoofdopties.
+- Extra onderdelen staan in een uitschuifbaar Meer-menu.
+- Veilige ruimte voor iPhone-home-indicator toegevoegd.
+- Cacheversie verhoogd naar marathon-coach-v10-1.

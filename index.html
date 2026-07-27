@@ -4,6 +4,21 @@
 <meta name="theme-color" content="#0a0c0b"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icons/icon-192.png">
 <title>Marathon Voedingscoach</title><link rel="stylesheet" href="styles.css"></head>
-<body><div id="app"><header class="topbar"><div><div class="eyebrow">AMSTERDAM MARATHON</div><h1 id="pageTitle">Vandaag</h1></div><button class="icon-btn" id="aiQuick" aria-label="Open AI coach">✦</button></header><main id="view"></main><nav id="nav">
-<button data-tab="dashboard" class="active"><span>⌂</span>Home</button><button data-tab="diary"><span>▣</span>Dagboek</button><button data-tab="weeks"><span>▦</span>Planning</button><button data-tab="shopping"><span>🛒</span>Boodschappen</button><button data-tab="recipes"><span>◫</span>Recepten</button><button data-tab="racebook"><span>⚑</span>Race</button><button data-tab="coach"><span>✦</span>AI coach</button><button data-tab="profile"><span>◎</span>Ik</button></nav></div>
+<body><div id="app"><header class="topbar"><div><div class="eyebrow">AMSTERDAM MARATHON</div><h1 id="pageTitle">Vandaag</h1></div><button class="icon-btn" id="aiQuick" aria-label="Open AI coach">✦</button></header><main id="view"></main>
+<nav id="nav" aria-label="Hoofdnavigatie">
+<button data-tab="dashboard" class="active"><span>⌂</span><b>Home</b></button>
+<button data-tab="diary"><span>▣</span><b>Dagboek</b></button>
+<button data-tab="weeks"><span>▦</span><b>Planning</b></button>
+<button id="moreNavButton" type="button" aria-expanded="false" aria-controls="moreMenu"><span>☰</span><b>Meer</b></button>
+</nav></div>
+<div id="moreBackdrop" onclick="closeMoreMenu()"></div>
+<section id="moreMenu" aria-hidden="true" aria-label="Meer navigatie">
+<div class="more-handle"></div><div class="more-title"><div><small>MARATHON COACH</small><h2>Meer</h2></div><button type="button" onclick="closeMoreMenu()">×</button></div>
+<div class="more-grid">
+<button data-tab="shopping"><span>🛒</span><b>Boodschappen</b><small>Weeklijst beheren</small></button>
+<button data-tab="recipes"><span>◫</span><b>Recepten</b><small>Gerechten zoeken</small></button>
+<button data-tab="racebook"><span>⚑</span><b>Race</b><small>Marathonweek</small></button>
+<button data-tab="coach"><span>✦</span><b>AI coach</b><small>Persoonlijk advies</small></button>
+<button data-tab="profile"><span>◎</span><b>Mijn profiel</b><small>Gewicht en weergave</small></button>
+</div></section>
 <div id="toast"></div><script src="data.js"></script><script src="nl-recipes.js"></script><script src="app.js"></script></body></html>

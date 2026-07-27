@@ -330,8 +330,29 @@ render=function(){
   let titles={dashboard:'Dashboard',diary:(state.date===localISO()?'Vandaag':fmt(state.date)),weeks:'Planning',shopping:'Boodschappen',recipes:'Recepten',racebook:'Marathonweek',coach:'AI voedingscoach',profile:state.profile.name};
   $('#pageTitle').textContent=titles[state.tab]||'Marathoncoach';
   $('#view').innerHTML=state.tab==='dashboard'?dashboard():state.tab==='diary'?diary():state.tab==='weeks'?weeks():state.tab==='shopping'?shopping():state.tab==='recipes'?recipeLibrary():state.tab==='racebook'?racebook():state.tab==='coach'?coach():profile();
-  document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===state.tab));
+  setNavActive();
   store.set('activeTabV10',state.tab);window.scrollTo({top:0,behavior:'instant'});
 }
-document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>{state.tab=b.dataset.tab;render()});
+function setNavActive(){
+  document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===state.tab));
+  const moreTabs=['shopping','recipes','racebook','coach','profile'];
+  const more=document.querySelector('#moreNavButton');
+  if(more)more.classList.toggle('active',moreTabs.includes(state.tab));
+}
+function openMoreMenu(){
+  document.body.classList.add('more-open');
+  document.querySelector('#moreMenu')?.setAttribute('aria-hidden','false');
+  document.querySelector('#moreNavButton')?.setAttribute('aria-expanded','true');
+}
+function closeMoreMenu(){
+  document.body.classList.remove('more-open');
+  document.querySelector('#moreMenu')?.setAttribute('aria-hidden','true');
+  document.querySelector('#moreNavButton')?.setAttribute('aria-expanded','false');
+}
+function bindV10Navigation(){
+  document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{state.tab=b.dataset.tab;closeMoreMenu();render()});
+  const more=document.querySelector('#moreNavButton');
+  if(more)more.onclick=()=>document.body.classList.contains('more-open')?closeMoreMenu():openMoreMenu();
+}
+bindV10Navigation();
 render();
