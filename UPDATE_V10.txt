@@ -1,0 +1,13 @@
+MARATHON VOEDINGSCOACH V10
+
+Nieuw:
+- Dashboard met aftellen tot de Amsterdam Marathon.
+- Overzicht van de volgende training en maaltijdvoortgang.
+- Hydratatietracker met doel per dagtype.
+- Dagelijkse supplementenchecklist.
+- Volledig marathonweek-racebook.
+- Dagelijks wisselende dineropties uit de bestaande receptendatabase.
+- Week 1 t/m 12 en alle bestaande boodschappenfuncties blijven behouden.
+- Cache bijgewerkt naar marathon-coach-v10.
+
+Upload alle bestanden en mappen uit pwa_v10 naar de hoofdmap van GitHub.

@@ -114,6 +114,7 @@ state.recipeQuery='';
 state.recipeDiet='all';
 state.recipePage=0;
 state.openRecipe=null;
+state.dinnerRefresh=store.get('dinnerRefresh',{});
 const MEALDB_BASE='https://www.themealdb.com/api/json/v1/1';
 const TR=window.NL_RECIPE_TRANSLATOR;
 
@@ -213,14 +214,44 @@ function recipeScore(r,d){
   score+=(parseInt(r.id||'0',10)+new Date(d.date+'T12:00:00').getDate())%23;
   return score;
 }
+function fallbackDinnerRecipes(d){
+  return d.dinners.map(c=>DATA.recipes.find(r=>r.code===c)).filter(Boolean).map(r=>({id:r.code,name:r.name,photo:r.photo,category:r.type,ingredients:r.ingredients.split(';').map(x=>x.trim()),steps:[r.prep],vegetarian:/veget/i.test(r.type),seafood:/vis/i.test(r.type),meat:!/veget|vis/i.test(r.type)}));
+}
+function dinnerSeed(d){
+  const first=new Date(planner[0].date+'T12:00:00');
+  const current=new Date(d.date+'T12:00:00');
+  const index=Math.floor((current-first)/86400000);
+  const refresh=state.dinnerRefresh[d.date+'-'+state.dinnerMode]||0;
+  return index*3+refresh*3+(state.dinnerMode==='alone'?1:0);
+}
 function suggestedRecipes(d,count=3){
-  if(!state.recipeDb.length)return d.dinners.map(c=>DATA.recipes.find(r=>r.code===c)).filter(Boolean).map(r=>({id:r.code,name:r.name,photo:r.photo,category:r.type,ingredients:r.ingredients.split(';').map(x=>x.trim()),steps:[r.prep],vegetarian:/veget/i.test(r.type),seafood:/vis/i.test(r.type),meat:!/veget|vis/i.test(r.type)}));
-  return [...state.recipeDb].sort((a,b)=>recipeScore(b,d)-recipeScore(a,d)).slice(0,count);
+  if(!state.recipeDb.length)return fallbackDinnerRecipes(d).slice(0,count);
+  const ranked=[...state.recipeDb].sort((a,b)=>recipeScore(b,d)-recipeScore(a,d)||String(a.id).localeCompare(String(b.id)));
+  const preferred=ranked.filter(r=>state.dinnerMode==='together'?(r.vegetarian||r.seafood):(r.meat||r.seafood));
+  const other=ranked.filter(r=>!preferred.includes(r));
+  const pool=[...preferred,...other];
+  if(!pool.length)return [];
+  const start=((dinnerSeed(d)%pool.length)+pool.length)%pool.length;
+  const result=[];
+  for(let i=0;i<pool.length&&result.length<count;i++){
+    const r=pool[(start+i)%pool.length];
+    if(!result.some(x=>String(x.id)===String(r.id)))result.push(r);
+  }
+  return result;
+}
+function refreshDinnerSuggestions(){
+  const k=state.date+'-'+state.dinnerMode;
+  state.dinnerRefresh[k]=(state.dinnerRefresh[k]||0)+1;
+  store.set('dinnerRefresh',state.dinnerRefresh);
+  delete state.choices[key('dinnerRecipe')];
+  store.set('choices',state.choices);
+  render();
+  toast('Drie nieuwe dineropties geladen');
 }
 function detailedRecipeCard(r,compact=false){if(!r)return'';return `<article class="recipe-card database-card"><img class="recipe-hero" src="${r.photo}" alt="${esc(r.name)}" loading="lazy"><div class="recipe-body"><h3>${esc(r.name)}</h3><div class="tags"><span class="tag">${esc(r.category||'Recept')}</span><span class="tag">${r.vegetarian?'Vegetarisch':r.seafood?'Vis':'Vlees'}</span><span class="tag">${state.dinnerMode==='together'?'Voor 2 personen':'Voor 1 persoon'}</span></div>${compact?'':`<h4>Ingrediënten</h4><ul class="ingredient-list">${r.ingredients.map(x=>`<li>${esc(x)}</li>`).join('')}</ul><h4>Bereiding stap voor stap</h4><ol class="step-list">${r.steps.map(x=>`<li>${esc(x)}</li>`).join('')}</ol>`}<div class="recipe-actions"><button class="primary" onclick="addDbRecipe('${r.id}')">Voeg ingrediënten toe</button>${compact?`<button class="secondary" onclick="openRecipeDetail('${r.id}')">Bekijk volledig recept</button><button class="secondary whatsapp" onclick="shareRecipe('${r.id}')">Deel via WhatsApp</button>`:`<button class="secondary whatsapp" onclick="shareRecipe('${r.id}')">Deel via WhatsApp</button><button class="secondary choice-share" onclick="chooseAndShare('${r.id}')">Deze wil ik vanavond</button>`}</div></div></article>`}
 function dinnerSection(d){
   const suggestions=suggestedRecipes(d,3),chosen=state.choices[key('dinnerRecipe')];
-  return `<section><div class="section-head"><div><h2>Avondeten</h2><p>${state.dinnerMode==='together'?'Voornamelijk vegetarisch voor jou en je vriendin':'Meer kip- en vleesopties voor jou alleen'} · tik nogmaals om te deselecteren</p></div></div><div class="mode-toggle"><button class="${state.dinnerMode==='alone'?'active':''}" onclick="setDinnerMode('alone')">Alleen eten</button><button class="${state.dinnerMode==='together'?'active':''}" onclick="setDinnerMode('together')">Samen eten</button></div><div class="meal-card dinner-choices">${suggestions.map((r,i)=>`<div class="meal-option ${chosen===r.id?'selected':''}" onclick="chooseDinnerRecipe('${r.id}')"><img src="${r.photo}" alt="${esc(r.name)}" loading="lazy"><div><h4>${esc(r.name)}</h4><p>${esc(r.category)} · ${r.vegetarian?'Vegetarisch':r.seafood?'Vis':'Vlees'}</p></div><span class="check">${chosen===r.id?'✓':''}</span></div>`).join('')}</div><div class="section-head"><div><h2>Receptdetails</h2><p>Volledige ingrediënten en bereidingsstappen</p></div></div>${suggestions.map(r=>detailedRecipeCard(r)).join('')}</section>`;
+  return `<section><div class="section-head"><div><h2>Avondeten</h2><p>${state.dinnerMode==='together'?'Voornamelijk vegetarisch voor jou en je vriendin':'Meer kip- en vleesopties voor jou alleen'} · elke datum heeft andere opties</p></div><button class="add-btn" aria-label="Andere dineropties" onclick="refreshDinnerSuggestions()">↻</button></div><div class="mode-toggle"><button class="${state.dinnerMode==='alone'?'active':''}" onclick="setDinnerMode('alone')">Alleen eten</button><button class="${state.dinnerMode==='together'?'active':''}" onclick="setDinnerMode('together')">Samen eten</button></div><div class="meal-card dinner-choices">${suggestions.map((r,i)=>`<div class="meal-option ${chosen===r.id?'selected':''}" onclick="chooseDinnerRecipe('${r.id}')"><img src="${r.photo}" alt="${esc(r.name)}" loading="lazy"><div><h4>${esc(r.name)}</h4><p>${esc(r.category)} · ${r.vegetarian?'Vegetarisch':r.seafood?'Vis':'Vlees'}</p></div><span class="check">${chosen===r.id?'✓':''}</span></div>`).join('')}</div><div class="section-head"><div><h2>Receptdetails</h2><p>Volledige ingrediënten en bereidingsstappen</p></div></div>${suggestions.map(r=>detailedRecipeCard(r)).join('')}</section>`;
 }
 function chooseDinnerRecipe(id){const k=key('dinnerRecipe');if(state.choices[k]===id){delete state.choices[k];store.set('choices',state.choices);render();toast('Avondmaaltijd gedeselecteerd');return}state.choices[k]=id;store.set('choices',state.choices);render();toast('Avondmaaltijd gekozen')}
 function addDbRecipe(id){
@@ -270,4 +301,37 @@ render=function(){
 // Rebind because the recipes tab was added to the navigation.
 document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>{state.tab=b.dataset.tab;render()});
 loadRecipeDatabase(false);
+render();
+
+/* V10 dashboard, hydration, supplements and marathon racebook */
+state.hydration=store.get('hydration',{});
+state.supplements=store.get('supplements',{});
+state.tab=store.get('activeTabV10',state.tab==='diary'?'dashboard':state.tab);
+const RACE_DATE='2026-10-18';
+const SUPPLEMENTS=['Vitamine D','Omega 3','Magnesium','Creatine','Elektrolyten'];
+function daysUntilRace(){return Math.max(0,Math.ceil((new Date(RACE_DATE+'T12:00:00')-new Date(localISO()+'T12:00:00'))/86400000))}
+function hydrationTarget(d){if(d.daytype==='Wedstrijddag')return 3.5;if(d.daytype==='Carb-load')return 3.4;if(/Lange duur/.test(d.daytype))return 3.5;if(d.daytype==='Tempo/interval')return 3.3;if(d.daytype==='Rustige loop')return 3.2;return 3.0}
+function hydrationValue(d=day()){return Number(state.hydration[d.date]||0)}
+function addWater(amount=.25){const d=day(),target=hydrationTarget(d);state.hydration[d.date]=Math.max(0,Math.min(target+1,hydrationValue(d)+amount));store.set('hydration',state.hydration);render();toast(`${amount.toLocaleString('nl-NL')} L toegevoegd`)}
+function resetWater(){state.hydration[day().date]=0;store.set('hydration',state.hydration);render()}
+function toggleSupplement(name){const k=state.date+'-'+name;state.supplements[k]=!state.supplements[k];store.set('supplements',state.supplements);render()}
+function nextTraining(){const today=localISO();return planner.find(x=>x.date>=today&&x.training!=='Rust')||planner.find(x=>x.training!=='Rust')}
+function completedMeals(d=day()){return ['breakfast','lunch','snack'].filter(m=>state.choices[d.date+'-'+m]!=null).length+(state.choices[d.date+'-dinnerRecipe']!=null?1:0)}
+function gotoDay(date){state.date=date;state.tab='diary';store.set('activeTabV10',state.tab);render()}
+function dashboard(){const d=day(),next=nextTraining(),done=completedMeals(d),water=hydrationValue(d),target=hydrationTarget(d),pct=Math.min(100,Math.round(water/target*100));return `
+<div class="v10-hero"><div><span class="v10-kicker">AMSTERDAM MARATHON</span><h2>Nog ${daysUntilRace()} dagen</h2><p>Persoonlijke voeding, herstel en racevoorbereiding</p></div><div class="race-ring"><b>${daysUntilRace()}</b><span>dagen</span></div></div>
+<div class="dashboard-grid"><button class="dash-card next-card" onclick="gotoDay('${next.date}')"><span>Volgende training</span><h3>${esc(next.training)}</h3><p>${fmt(next.date)} · ${esc(next.daytype)}</p></button><button class="dash-card" onclick="state.tab='diary';render()"><span>Vandaag</span><h3>${done}/4 maaltijden</h3><p>${esc(d.training)} · ${Math.round(d.carbs)} g koolhydraten</p></button></div>
+<section><div class="section-head"><div><h2>Hydratatie</h2><p>${water.toLocaleString('nl-NL')} van ${target.toLocaleString('nl-NL')} liter</p></div><button class="add-btn" onclick="resetWater()">×</button></div><div class="hydration-card"><div class="water-progress"><i style="width:${pct}%"></i></div><div class="water-actions"><button onclick="addWater(.25)">+ 250 ml</button><button onclick="addWater(.5)">+ 500 ml</button></div></div></section>
+<section><div class="section-head"><div><h2>Supplementen</h2><p>Dagelijkse checklist</p></div></div><div class="supplement-list">${SUPPLEMENTS.map(s=>{const checked=!!state.supplements[state.date+'-'+s];return `<button class="supplement ${checked?'done':''}" onclick="toggleSupplement('${s}')"><span>${checked?'✓':'○'}</span>${s}</button>`}).join('')}</div></section>
+<section><div class="section-head"><div><h2>Deze week</h2><p>Training en voeding in één overzicht</p></div></div>${planner.filter(x=>x.week===d.week).map(x=>`<button class="mini-day ${x.date===d.date?'active':''}" onclick="gotoDay('${x.date}')"><span>${x.day.slice(0,2)}</span><b>${esc(x.training)}</b><small>${Math.round(x.carbs)} g KH</small></button>`).join('')}</section>`}
+function racebook(){const race=planner.find(x=>x.date===RACE_DATE)||planner.at(-1);const week=planner.filter(x=>x.week===race.week);const schedule={Maandag:'Normaal eten, rustig herstel en 3,0 L drinken.',Dinsdag:'Koolhydraten geleidelijk verhogen. Geen nieuwe producten testen.',Woensdag:'Laatste afbouwtraining. Eet 2–3 uur vooraf licht en koolhydraatrijk.',Donderdag:'Start carb-load. Kies witte pasta, rijst, brood en weinig vezels.',Vrijdag:'Carb-load voortzetten. Verdeel eten over 5–6 kleinere momenten.',Zaterdag:'Laatste grote koolhydraatdag. Diner vroeg, vertrouwd en vetarm.',Zondag:'Wedstrijddag: ontbijt 3 uur vooraf, eerste gel na 30 minuten, daarna elke 30–35 minuten.'};return `<div class="racebook-hero"><span>RACEBOOK</span><h2>Marathonweek</h2><p>18 oktober 2026 · Amsterdam</p></div>${week.map(d=>`<article class="race-day"><div><b>${d.day}</b><span>${fmt(d.date)}</span></div><h3>${esc(d.training)}</h3><p>${schedule[d.day]||d.focus}</p><div class="race-tags"><span>${Math.round(d.carbs)} g KH</span><span>${hydrationTarget(d).toLocaleString('nl-NL')} L</span></div></article>`).join('')}<article class="race-day race-plan"><h3>Wedstrijdplan</h3><ol><li>Ontbijt 3 uur vóór de start: 120–180 g koolhydraten.</li><li>500–750 ml drinken in de laatste 2 uur, daarna kleine slokken.</li><li>Eerste gel na 30 minuten, vervolgens elke 30–35 minuten.</li><li>Streef naar 60–90 g koolhydraten per uur.</li><li>Na de finish: drinken, zout, koolhydraten en 25–35 g eiwit.</li></ol></article>`}
+const renderV9=render;
+render=function(){
+  let titles={dashboard:'Dashboard',diary:(state.date===localISO()?'Vandaag':fmt(state.date)),weeks:'Planning',shopping:'Boodschappen',recipes:'Recepten',racebook:'Marathonweek',coach:'AI voedingscoach',profile:state.profile.name};
+  $('#pageTitle').textContent=titles[state.tab]||'Marathoncoach';
+  $('#view').innerHTML=state.tab==='dashboard'?dashboard():state.tab==='diary'?diary():state.tab==='weeks'?weeks():state.tab==='shopping'?shopping():state.tab==='recipes'?recipeLibrary():state.tab==='racebook'?racebook():state.tab==='coach'?coach():profile();
+  document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===state.tab));
+  store.set('activeTabV10',state.tab);window.scrollTo({top:0,behavior:'instant'});
+}
+document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>{state.tab=b.dataset.tab;render()});
 render();
