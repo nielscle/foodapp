@@ -1,0 +1,8 @@
+Versie 8
+- Runna week 11: dinsdag 8 km rustig, donderdag 7 km intervallen, zondag 13 km lang.
+- Runna week 12: woensdag 7,2 km afbouwintervallen en zondag marathon 42,2 km.
+- Volwaardige voeding op alle rust-, herstel-, voorbereidings- en carb-loaddagen.
+- Ontbijt, lunch en snack tonen per datum drie roterende opties in plaats van dagelijks dezelfde keuzes.
+- Boodschappen zijn afzonderlijk te verwijderen.
+- Afgevinkte boodschappen kunnen in één keer worden verwijderd.
+- De hele boodschappenlijst kan in één keer worden gewist.

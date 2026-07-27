@@ -1,0 +1,6 @@
+Versie 7
+- Runna-dagen weken 1-10 exact gekoppeld aan het aangeleverde schema.
+- Week 1 rustige loop verplaatst van dinsdag 28 juli naar maandag 27 juli.
+- Rustdagen hebben nu een volledig voedingsdoel: herstel, voorbereiding of gebalanceerde rustdag.
+- Receptendatabase en receptenlogica zijn ongewijzigd.
+- Cacheversie vernieuwd om oude planning te vervangen.
